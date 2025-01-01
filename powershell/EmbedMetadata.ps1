@@ -1,19 +1,41 @@
 # Define the script
 param(
     [string]$TargetFolder = ".",
-    [switch]$WriteToOriginal
+    [switch]$WriteToOriginal,
+    [switch]$DeleteOutput,
+    [switch]$DeleteOutputOld
 )
 
-# Create the output directory (if not writing to original files)
+# Define output folder paths
+$outputFolder = Join-Path -Path $TargetFolder -ChildPath "output"
+$outputOldFolder = Join-Path -Path $TargetFolder -ChildPath "output.old"
+
+# Handle output folder cleanup
 if (-not $WriteToOriginal) {
-    $outputFolder = Join-Path -Path $TargetFolder -ChildPath "output"
-    if (-not (Test-Path -Path $outputFolder)) {
-        New-Item -ItemType Directory -Path $outputFolder | Out-Null
+    # Delete output.old if specified
+    if ($DeleteOutputOld -and (Test-Path -Path $outputOldFolder)) {
+        Remove-Item -Path $outputOldFolder -Recurse -Force
+        Write-Host "Deleted existing output.old folder."
     }
+
+    # Rename output to output.old if it exists
+    if (Test-Path -Path $outputFolder) {
+        Rename-Item -Path $outputFolder -NewName "output.old"
+        Write-Host "Renamed existing output folder to output.old."
+    }
+
+    # Delete output folder if specified
+    if ($DeleteOutput -and (Test-Path -Path $outputFolder)) {
+        Remove-Item -Path $outputFolder -Recurse -Force
+        Write-Host "Deleted existing output folder."
+    }
+
+    # Create a new output folder
+    New-Item -ItemType Directory -Path $outputFolder | Out-Null
 }
 
-# Function to parse .nfo and generate metadata text for ffmpeg
-function New-Metadatafile {
+# Function to create metadata text from .nfo
+function New-MetadataFile {
     param(
         [string]$nfoFile,
         [string]$metadataFile
