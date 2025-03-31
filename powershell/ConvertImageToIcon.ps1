@@ -1,6 +1,34 @@
+<#
+.SYNOPSIS
+    Konvertiert Bilddateien in ICO-Dateien mit einer angegebenen Größe.
+
+.DESCRIPTION
+    Dieses Skript verwendet ffmpeg, um Bilddateien im aktuellen Verzeichnis in ICO-Dateien zu konvertieren.
+    Es unterstützt die Angabe eines Ausgabeordners, eines Eingabefilters und einer Icon-Größe.
+
+.PARAMETER OutputDir
+    Der Ordner, in dem die konvertierten ICO-Dateien gespeichert werden. Standard ist ".\ConvertedIcons".
+
+.PARAMETER InputFilter
+    Der Filter für die Eingabedateien (z. B. "*.png", "*.jpg"). Standard ist "*.png".
+
+.PARAMETER IconSize
+    Die Größe der ICO-Dateien im Format "BreitexHöhe" (z. B. "48x48"). Standard ist "48x48".
+
+.EXAMPLE
+    .\ConvertImageToIcon.ps1 -OutputDir ".\Icons" -InputFilter "*.jpg" -IconSize "64x64"
+    Konvertiert alle JPG-Dateien im aktuellen Verzeichnis in ICO-Dateien mit der Größe 64x64 und speichert sie im Ordner ".\Icons".
+
+.NOTES
+    - ffmpeg muss installiert und im PATH verfügbar sein.
+    - Bereits vorhandene ICO-Dateien werden übersprungen.
+
+#>
+
 param (
     [string]$OutputDir = ".\ConvertedIcons", # Default output directory
-    [string]$InputFilter = "*.png" # Default input file type (change to "*.jpg", "*.bmp", etc.)
+    [string]$InputFilter = "*.png", # Default input file type (change to "*.jpg", "*.bmp", etc.)
+    [string]$IconSize = "48x48" # Default icon size
 )
 
 # Ensure ffmpeg is installed
@@ -39,8 +67,16 @@ foreach ($file in $inputFiles) {
         continue
     }
 
-    # Run ffmpeg silently
-    Start-Process -NoNewWindow -Wait -FilePath "ffmpeg" -ArgumentList "-i `"$($file.FullName)`" -vf scale=48:48 -y `"$outputIco`" -loglevel quiet"
+    # Adjust icon size based on filename suffix if IconSize is default
+    $effectiveIconSize = $IconSize
+    if ($IconSize -eq "48x48" -and $file.Name -match "@(\d+)x$") {
+        $scaleFactor = [int]$matches[1]
+        $baseSize = 48
+        $effectiveIconSize = "$($baseSize * $scaleFactor)x$($baseSize * $scaleFactor)"
+    }
+
+    # Run ffmpeg silently with adjusted icon size
+    Start-Process -NoNewWindow -Wait -FilePath "ffmpeg" -ArgumentList "-i `"$($file.FullName)`" -vf scale=$effectiveIconSize -y `"$outputIco`" -loglevel quiet"
 
     # Update progress bar
     $counter++
